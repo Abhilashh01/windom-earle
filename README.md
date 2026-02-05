@@ -1,16 +1,16 @@
 # Eastside
 
-A full-stack ecommerce app where users can browse products, manage a cart, apply coupons, and pay with Stripe, with an admin dashboard for product management and sales analytics.
+A full-stack ecommerce app where users can browse products, manage a cart, apply coupons, and pay with Razorpay, with an admin dashboard for product management and sales analytics.
 
 **Tech stack**
 - Frontend: React + Vite, Tailwind CSS, React Router, Zustand, Axios, Framer Motion
-- Backend: Node.js + Express, MongoDB (Mongoose), JWT auth, Stripe
-- Services: Cloudinary (images), Upstash Redis (optional cache), Stripe Checkout
+- Backend: Node.js + Express, MongoDB (Mongoose), JWT auth, Razorpay
+- Services: Cloudinary (images), Upstash Redis (optional cache + refresh tokens), Razorpay Checkout
 
 ## Requirements
 - Node.js 18+ (or newer LTS)
 - MongoDB (local or Atlas)
-- Stripe account (Payments)
+- Razorpay account (Payments)
 - Cloudinary account (images)
 - Upstash Redis (optional, for cache + refresh tokens)
 
@@ -27,19 +27,13 @@ A full-stack ecommerce app where users can browse products, manage a cart, apply
    MONGO_URI=your_mongodb_connection_string
    ACCESS_TOKEN_SECRET=your_access_token_secret
    REFRESH_TOKEN_SECRET=your_refresh_token_secret
-   STRIPE_SECRET_KEY=your_stripe_secret_key
+   RAZORPAY_KEY_ID=your_razorpay_key_id
+   RAZORPAY_KEY_SECRET=your_razorpay_key_secret
    CLIENT_URL=http://localhost:5173
    CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
    CLOUDINARY_API_KEY=your_cloudinary_api_key
    CLOUDINARY_API_SECRET=your_cloudinary_api_secret
    UPSTASH_REDIS_URL=your_upstash_redis_url
-   ```
-
-3. Create frontend environment file  
-   Create `frontend/.env` with:
-   ```
-   # Optional: wire this into OrderSummary.jsx if you want it configurable
-   VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
    ```
 
 ## Run locally (dev)
@@ -65,7 +59,7 @@ This builds the frontend and serves it from the backend when `NODE_ENV=productio
 
 ## Deployment
 - Any Node hosting that supports environment variables and access to MongoDB
-- Optional managed services: MongoDB Atlas, Cloudinary, Upstash Redis, Stripe
+- Optional managed services: MongoDB Atlas, Cloudinary, Upstash Redis, Razorpay
 
 ## Architecture
 ```mermaid
@@ -104,7 +98,7 @@ flowchart TB
   ODB --> MONGO
 
   PC --> CLOUD["Cloudinary (Product Images)"]
-  PAY --> STRIPE["Stripe Checkout (SaaS)"]
+  PAY --> RZP["Razorpay Checkout (SaaS)"]
   AC --> REDIS["Upstash Redis (optional)"]
   PC --> REDIS
 
@@ -121,7 +115,7 @@ flowchart TB
   G --> S1
 
   subgraph SECRETS["Secrets / Config (env vars)"]
-    K["Examples: DB URI, JWT secrets, Stripe + Cloudinary keys"]
+    K["Examples: DB URI, JWT secrets, Razorpay + Cloudinary keys"]
   end
 
   K --> B
@@ -129,9 +123,9 @@ flowchart TB
 
 ## What you need to run this project
 - A MongoDB connection string in `MONGO_URI`
-- Stripe credentials:
-  - `STRIPE_SECRET_KEY` (backend)
-  - Optional `VITE_STRIPE_PUBLISHABLE_KEY` if you wire it into the frontend
+- Razorpay credentials:
+  - `RAZORPAY_KEY_ID`
+  - `RAZORPAY_KEY_SECRET`
 - Cloudinary credentials:
   - `CLOUDINARY_CLOUD_NAME`
   - `CLOUDINARY_API_KEY`
@@ -145,4 +139,4 @@ flowchart TB
 ## Notes
 - CORS allows `CLIENT_URL` in development; if unset it falls back to `*`.
 - In production, the backend serves the built frontend from `frontend/dist`.
-- The Stripe publishable key is currently hardcoded in `frontend/src/components/OrderSummary.jsx`.
+- The backend loads env vars from `backend/.env` when starting from the repo root.
