@@ -2,15 +2,24 @@ import { motion } from "framer-motion";
 import { useCartStore } from "../stores/useCartStore";
 import { Link } from "react-router-dom";
 import { MoveRight } from "lucide-react";
-import { loadStripe } from "@stripe/stripe-js";
 import axios from "../lib/axios";
+import { toast } from "react-hot-toast";
+const loadRazorpayScript = () =>
+	new Promise((resolve) => {
+		if (window.Razorpay) {
+			resolve(true);
+			return;
+		}
 
-const stripePromise = loadStripe(
-	"pk_test_51KZYccCoOZF2UhtOwdXQl3vcizup20zqKqT9hVUIsVzsdBrhqbUI2fE0ZdEVLdZfeHjeyFXtqaNsyCJCmZWnjNZa00PzMAjlcL"
-);
+		const script = document.createElement("script");
+		script.src = "https://checkout.razorpay.com/v1/checkout.js";
+		script.onload = () => resolve(true);
+		script.onerror = () => resolve(false);
+		document.body.appendChild(script);
+	});
 
 const OrderSummary = () => {
-	const { total, subtotal, coupon, isCouponApplied, cart } = useCartStore();
+	const { total, subtotal, coupon, isCouponApplied, cart, clearCart } = useCartStore();
 
 	const savings = subtotal - total;
 	const formattedSubtotal = subtotal.toFixed(2);
@@ -18,19 +27,55 @@ const OrderSummary = () => {
 	const formattedSavings = savings.toFixed(2);
 
 	const handlePayment = async () => {
-		const stripe = await stripePromise;
-		const res = await axios.post("/payments/create-checkout-session", {
-			products: cart,
-			couponCode: coupon ? coupon.code : null,
-		});
+		try {
+			const loaded = await loadRazorpayScript();
+			if (!loaded) {
+				toast.error("Failed to load Razorpay. Please try again.");
+				return;
+			}
 
-		const session = res.data;
-		const result = await stripe.redirectToCheckout({
-			sessionId: session.id,
-		});
+			const res = await axios.post("/payments/create-checkout-session", {
+				products: cart,
+				couponCode: coupon ? coupon.code : null,
+			});
 
-		if (result.error) {
-			console.error("Error:", result.error);
+			const { orderId, amount, currency, keyId } = res.data;
+
+			const options = {
+				key: keyId,
+				amount,
+				currency,
+				name: "Eastside",
+				description: "Order payment",
+				order_id: orderId,
+				handler: async (response) => {
+					try {
+						await axios.post("/payments/verify", {
+							...response,
+							products: cart,
+							couponCode: coupon ? coupon.code : null,
+						});
+						clearCart();
+						window.location.href = "/purchase-success";
+					} catch (error) {
+						console.error("Payment verification failed:", error);
+						toast.error("Payment verification failed. Please contact support.");
+					}
+				},
+				theme: {
+					color: "#10B981",
+				},
+			};
+
+			const razorpay = new window.Razorpay(options);
+			razorpay.on("payment.failed", (error) => {
+				console.error("Payment failed:", error?.error?.description || error);
+				toast.error(error?.error?.description || "Payment failed. Please try again.");
+			});
+			razorpay.open();
+		} catch (error) {
+			console.error("Checkout error:", error);
+			toast.error(error.response?.data?.message || "Checkout failed. Please try again.");
 		}
 	};
 

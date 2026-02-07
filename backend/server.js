@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import path from "path";
 import cors from "cors";
+import fs from "fs";
 
 import authRoutes from "./routes/auth.route.js";
 import productRoutes from "./routes/product.route.js";
@@ -13,7 +14,10 @@ import analyticsRoutes from "./routes/analytics.route.js";
 
 import { connectDB } from "./lib/db.js";
 
-dotenv.config();
+const envPath = fs.existsSync(path.resolve(process.cwd(), "backend/.env"))
+	? path.resolve(process.cwd(), "backend/.env")
+	: path.resolve(process.cwd(), ".env");
+dotenv.config({ path: envPath });
 console.log("MONGO_URI:", process.env.MONGO_URI); // Debug line
 
 const app = express();
